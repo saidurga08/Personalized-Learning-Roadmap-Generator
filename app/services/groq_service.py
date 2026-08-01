@@ -4,7 +4,6 @@ from groq import Groq
 
 from app.config import GROQ_API_KEY
 
-
 client = Groq(
     api_key=GROQ_API_KEY
 )
@@ -23,7 +22,8 @@ def generate_response(prompt: str):
             }
         ],
 
-        temperature=0.2
+        temperature=0.2,
+        max_completion_tokens=8000
 
     )
 
@@ -39,7 +39,14 @@ def generate_response(prompt: str):
                .strip()
     )
 
-    roadmap_json = json.loads(content)
+    try:
+        roadmap_json = json.loads(content)
+
+    except json.JSONDecodeError as e:
+        print("========== INVALID JSON ==========")
+        print(content)
+        print("==================================")
+        raise e
 
     from app.schemas.roadmap_schema import Roadmap
 

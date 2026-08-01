@@ -259,44 +259,46 @@ def save_steps(
     pass
 
 
-def save_resources(
-    topic_step_id,
-    resources
-):
+def save_resources(step_id, resources):
+
+    query = """
+    INSERT INTO resources (
+        step_id,
+        title,
+        url,
+        resource_type,
+        is_free
+    )
+    VALUES (%s, %s, %s, %s, %s);
+    """
+
+    ALLOWED_RESOURCE_TYPES = {
+        "video",
+        "article",
+        "website",
+        "course",
+        "book",
+        "documentation",
+        "other"
+    }
 
     for resource in resources:
 
-        query = """
-        INSERT INTO resources
-        (
-            step_id,
-            title,
-            url,
-            resource_type,
-            is_free
-        )
+        resource_type = resource.type.lower()
 
-        VALUES
-        (
-            %s,%s,%s,%s,%s
-        );
-        """
+        if resource_type not in ALLOWED_RESOURCE_TYPES:
+            resource_type = "other"
 
         execute_query(
-
             query,
-
             (
-                topic_step_id,
+                step_id,
                 resource.title,
                 resource.url,
-                resource.type,
+                resource_type,
                 resource.is_free
             )
-
         )
-    pass
-
 
 def load_roadmap(roadmap_id):
 

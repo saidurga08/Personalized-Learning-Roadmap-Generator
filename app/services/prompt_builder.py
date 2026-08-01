@@ -15,6 +15,12 @@ DO NOT explain anything.
 
 DO NOT change field names.
 
+Generate a roadmap between 6 and 8 weeks unless the user explicitly asks for longer.
+
+Each week should contain at most 2 topics.
+
+Each topic should contain at most 2 resources.
+
 Return JSON in EXACTLY this format:
 
 {{
