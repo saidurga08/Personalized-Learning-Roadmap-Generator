@@ -1,25 +1,31 @@
 from fastapi import APIRouter
+
 from app.schemas.request_schema import (
     GenerateRoadmapRequest,
     ModifyRoadmapRequest
 )
 
-router = APIRouter(prefix="/roadmaps", tags=["Roadmaps"])
+from app.services.roadmap_generation_service import (
+    generate_roadmap
+)
+
+from app.services.roadmap_modification_service import (
+    modify_roadmap
+)
+
+router = APIRouter(
+    prefix="/roadmaps",
+    tags=["Roadmaps"]
+)
 
 
 @router.post("/generate")
-def generate_roadmap(request: GenerateRoadmapRequest):
+def generate(request: GenerateRoadmapRequest):
 
-    return {
-        "message": "Generate roadmap endpoint working",
-        "request": request
-    }
+    return generate_roadmap(request)
 
 
 @router.post("/modify")
-def modify_roadmap(request: ModifyRoadmapRequest):
+def modify(request: ModifyRoadmapRequest):
 
-    return {
-        "message": "Modify roadmap endpoint working",
-        "request": request
-    }
+    return modify_roadmap(request)
