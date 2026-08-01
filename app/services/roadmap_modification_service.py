@@ -1,7 +1,24 @@
+from app.services.prompt_builder import (
+    build_modification_prompt
+)
+
+from app.services.groq_service import (
+    generate_response
+)
+
+
 def modify_roadmap(request):
 
-    return {
-        "status": "success",
-        "message": "Roadmap modification service reached",
-        "request": request.model_dump()
-    }
+    current_roadmap = {}
+
+    prompt = build_modification_prompt(
+
+        current_roadmap,
+
+        request.user_message
+
+    )
+
+    updated_roadmap = generate_response(prompt)
+
+    return updated_roadmap
