@@ -27,11 +27,21 @@ def generate_response(prompt: str):
 
     )
 
-    content = response.choices[0].message.content
+    content = response.choices[0].message.content.strip()
 
-    from app.schemas.roadmap_schema import Roadmap
+    print("========== GROQ RAW RESPONSE ==========")
+    print(content)
+    print("=======================================")
+
+    content = (
+        content.replace("```json", "")
+               .replace("```", "")
+               .strip()
+    )
 
     roadmap_json = json.loads(content)
+
+    from app.schemas.roadmap_schema import Roadmap
 
     roadmap = Roadmap(**roadmap_json)
 
