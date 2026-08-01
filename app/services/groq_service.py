@@ -29,4 +29,10 @@ def generate_response(prompt: str):
 
     content = response.choices[0].message.content
 
-    return json.loads(content)
+    from app.schemas.roadmap_schema import Roadmap
+
+    roadmap_json = json.loads(content)
+
+    roadmap = Roadmap(**roadmap_json)
+
+    return roadmap

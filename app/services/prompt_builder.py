@@ -1,16 +1,57 @@
 import json
 
-
 def build_generation_prompt(request):
 
     prompt = f"""
 You are PathQuest AI.
 
-Your task is to generate a personalized learning roadmap.
+Generate a personalized learning roadmap.
 
 Return ONLY valid JSON.
 
-User Constraints:
+DO NOT return markdown.
+
+DO NOT explain anything.
+
+DO NOT change field names.
+
+Return JSON in EXACTLY this format:
+
+{{
+  "title": "Machine Learning Foundations with Python",
+  "goal": "Master Machine Learning with Python",
+  "skill_level": "beginner",
+  "estimated_duration_weeks": 8,
+  "total_estimated_hours": 100,
+  "overview": "A short overview.",
+  "weeks": [
+    {{
+      "week_number": 1,
+      "title": "Week title",
+      "description": "Week description",
+      "estimated_hours": 12.5,
+      "milestone": "Milestone",
+      "assignment": "Assignment",
+      "topics": [
+        {{
+          "title": "Topic title",
+          "description": "Topic description",
+          "estimated_hours": 5,
+          "resources": [
+            {{
+              "title": "Resource title",
+              "url": "https://...",
+              "type": "video",
+              "is_free": true
+            }}
+          ]
+        }}
+      ]
+    }}
+  ]
+}}
+
+User Constraints
 
 Goal:
 {request.goal}
@@ -30,13 +71,7 @@ Learning Method:
 Prior Experience:
 {request.prior_experience}
 
-Generate the roadmap using the agreed JSON format.
-
-Do not include markdown.
-
-Do not explain anything.
-
-Return JSON only.
+Return ONLY JSON.
 """
 
     return prompt
