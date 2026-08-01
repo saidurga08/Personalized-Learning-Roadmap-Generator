@@ -1,19 +1,28 @@
+import uuid
+from enum import Enum
+
 from sqlalchemy import (
     Column,
-    String,
     Text,
+    String,
     Date,
     Numeric,
     DateTime,
-    ForeignKey
+    ForeignKey,
+    Enum as SQLEnum
 )
 
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-import uuid
 
 from app.database import Base
+
+
+class RoadmapStatus(str, Enum):
+    active = "active"
+    completed = "completed"
+    archived = "archived"
 
 
 class Roadmap(Base):
@@ -33,7 +42,8 @@ class Roadmap(Base):
 
     goal_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("goals.id")
+        ForeignKey("goals.id"),
+        nullable=True
     )
 
     title = Column(
@@ -47,30 +57,46 @@ class Roadmap(Base):
     )
 
     skill_level = Column(
-        String,
+        SQLEnum(
+            "beginner",
+            "intermediate",
+            "advanced",
+            name="skill_level_enum",
+            create_type=False
+        ),
         nullable=False
     )
 
     status = Column(
-        String,
-        default="active"
+        SQLEnum(
+            RoadmapStatus,
+            name="roadmap_status_enum",
+            create_type=False
+        ),
+        nullable=False,
+        server_default="active"
     )
 
     progress_percentage = Column(
         Numeric,
-        default=0
+        nullable=False,
+        server_default="0.00"
     )
 
     roadmap_json = Column(
-        JSONB
+        JSONB,
+        nullable=True
     )
 
     start_date = Column(
-        Date
+        Date,
+        nullable=False,
+        server_default=func.current_date()
     )
 
     target_completion_date = Column(
-        Date
+        Date,
+        nullable=True
     )
 
     created_at = Column(

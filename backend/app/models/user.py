@@ -1,10 +1,18 @@
-from sqlalchemy import Column, String, DateTime
+import uuid
+from enum import Enum
+
+from sqlalchemy import Column, String, DateTime, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-import uuid
 
 from app.database import Base
+
+
+class SkillLevel(str, Enum):
+    beginner = "beginner"
+    intermediate = "intermediate"
+    advanced = "advanced"
 
 
 class User(Base):
@@ -33,9 +41,13 @@ class User(Base):
     )
 
     default_skill_level = Column(
-        String,
+        SQLEnum(
+            SkillLevel,
+            name="skill_level_enum",
+            create_type=False
+        ),
         nullable=False,
-        default="beginner"
+        server_default="beginner"
     )
 
     created_at = Column(
@@ -52,11 +64,11 @@ class User(Base):
     goals = relationship(
         "Goal",
         back_populates="user",
-        cascade="all, delete"
+        cascade="all, delete-orphan"
     )
 
     roadmaps = relationship(
         "Roadmap",
         back_populates="user",
-        cascade="all, delete"
+        cascade="all, delete-orphan"
     )
