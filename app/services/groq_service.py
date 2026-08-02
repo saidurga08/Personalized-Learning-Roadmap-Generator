@@ -48,8 +48,8 @@ def generate_response(prompt: str):
         print("==================================")
         raise e
 
-    from app.schemas.roadmap_schema import Roadmap
+    from app.schemas.roadmap_schema import ModifiedRoadmap
 
-    roadmap = Roadmap(**roadmap_json)
+    modified_roadmap = ModifiedRoadmap(**roadmap_json)
 
-    return roadmap
+    return modified_roadmap

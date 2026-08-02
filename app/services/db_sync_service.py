@@ -327,6 +327,55 @@ def load_roadmap(roadmap_id):
 
     return result["roadmap_json"]
 
+
+def delete_resources(
+    roadmap_id
+):
+
+    query = """
+    DELETE FROM resources
+
+    WHERE step_id IN
+    (
+        SELECT id
+
+        FROM roadmap_steps
+
+        WHERE roadmap_id=%s
+    );
+    """
+
+    execute_query(
+
+        query,
+
+        (
+            roadmap_id,
+        )
+
+    )
+
+def delete_steps(
+    roadmap_id
+):
+
+    query = """
+    DELETE FROM roadmap_steps
+
+    WHERE roadmap_id=%s;
+    """
+
+    execute_query(
+
+        query,
+
+        (
+            roadmap_id,
+        )
+
+    )
+
+
 def update_roadmap_json(
     roadmap_id,
     roadmap
@@ -335,7 +384,11 @@ def update_roadmap_json(
     query = """
     UPDATE roadmaps
 
-    SET roadmap_json=%s
+    SET
+        title=%s,
+        goal=%s,
+        skill_level=%s,
+        roadmap_json=%s
 
     WHERE id=%s;
     """
@@ -345,6 +398,9 @@ def update_roadmap_json(
         query,
 
         (
+            roadmap.title,
+            roadmap.goal,
+            roadmap.skill_level,
             json.dumps(
                 roadmap.model_dump()
             ),
@@ -352,4 +408,36 @@ def update_roadmap_json(
         )
 
     )
-    pass
+
+
+def update_constraints(
+    roadmap_id,
+    constraints
+):
+
+    query = """
+    UPDATE roadmap_constraints
+
+    SET
+        hours_per_week=%s,
+        budget=%s,
+        learning_method=%s,
+        prior_experience=%s
+
+    WHERE roadmap_id=%s;
+    """
+
+    execute_query(
+
+        query,
+
+        (
+            constraints.hours_per_week,
+            constraints.budget,
+            constraints.learning_method,
+            constraints.prior_experience,
+            roadmap_id
+        )
+
+    )
+    

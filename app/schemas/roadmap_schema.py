@@ -34,3 +34,14 @@ class Roadmap(BaseModel):
     total_estimated_hours: float
     overview: str
     weeks: List[Week]
+
+class Constraints(BaseModel):
+    hours_per_week: int
+    budget: int
+    learning_method: str
+    prior_experience: str
+
+
+class ModifiedRoadmap(BaseModel):
+    constraints: Constraints
+    roadmap: Roadmap
