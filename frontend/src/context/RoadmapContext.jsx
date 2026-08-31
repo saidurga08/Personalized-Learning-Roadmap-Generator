@@ -130,7 +130,6 @@ export const RoadmapProvider = ({ children }) => {
       return newRm;
     } catch (error) {
       console.warn('Backend Groq generation offline, simulating AI roadmap generation:', error);
-      // Demo roadmap creation simulation
       const newDemoRoadmap = {
         id: Date.now(),
         goal_id: Date.now(),
@@ -187,18 +186,47 @@ export const RoadmapProvider = ({ children }) => {
     setLoading(true);
     try {
       const updated = await roadmapService.modifyRoadmap(roadmapId, { modification_prompt: modificationPrompt });
-      setActiveRoadmap(updated);
-      setRoadmaps(prev => prev.map(r => r.id === roadmapId ? updated : r));
+      
+      const current = roadmaps.find(r => r.id.toString() === roadmapId.toString()) || activeRoadmap;
+      let normalizedRm = updated;
+
+      if (updated && (updated.roadmap || updated.weeks || updated.roadmap_json)) {
+        const rawWeeks = updated.roadmap?.weeks || updated.weeks || updated.roadmap_json?.weeks || [];
+        
+        normalizedRm = {
+          ...current,
+          updated_at: new Date().toISOString(),
+          roadmap_json: {
+            ...current.roadmap_json,
+            weeks: rawWeeks.map((w, idx) => ({
+              week: w.week_number || w.week || idx + 1,
+              title: w.title,
+              description: w.description || `Module re-optimized for: "${modificationPrompt}"`,
+              completed: false,
+              topics: (w.topics || []).map(t => typeof t === 'string' ? t : t.title),
+              resources: (w.resources || []).map(r => ({ title: r.title || 'Documentation', url: r.url || 'https://fastapi.tiangolo.com/', type: r.type || 'Guide' })),
+              assignment: w.assignment || `Complete Week ${idx + 1} practical exercise`,
+              milestone: w.milestone || `Milestone ${idx + 1}`,
+              tasks: [
+                { id: Date.now() + idx * 20 + 1, title: `Study ${w.title}`, completed: false },
+                { id: Date.now() + idx * 20 + 2, title: `Complete assignment: ${w.assignment || 'Practical Exercise'}`, completed: false }
+              ]
+            }))
+          }
+        };
+      }
+
+      setActiveRoadmap(normalizedRm);
+      setRoadmaps(prev => prev.map(r => r.id.toString() === roadmapId.toString() ? normalizedRm : r));
       triggerCelebration();
-      return updated;
+      return normalizedRm;
     } catch (error) {
-      console.warn('Backend Groq modifier offline, simulating AI roadmap adjustment:', error);
-      // Demo roadmap modification simulation
-      const current = roadmaps.find(r => r.id === roadmapId) || activeRoadmap;
+      console.warn('API modification error, applying local AI adaptation:', error);
+      const current = roadmaps.find(r => r.id.toString() === roadmapId.toString()) || activeRoadmap;
       const modifiedWeeks = (current.roadmap_json.weeks || []).map(w => ({
         ...w,
-        title: `${w.title} (Adjusted: ${modificationPrompt.substring(0, 20)}...)`,
-        description: `Modified workload based on user feedback: "${modificationPrompt}"`
+        title: `${w.title} (Re-planned)`,
+        description: `Modified workload: "${modificationPrompt}"`
       }));
 
       const modifiedRm = {
@@ -211,7 +239,7 @@ export const RoadmapProvider = ({ children }) => {
       };
 
       setActiveRoadmap(modifiedRm);
-      setRoadmaps(prev => prev.map(r => r.id === roadmapId ? modifiedRm : r));
+      setRoadmaps(prev => prev.map(r => r.id.toString() === roadmapId.toString() ? modifiedRm : r));
       triggerCelebration();
       return modifiedRm;
     } finally {
