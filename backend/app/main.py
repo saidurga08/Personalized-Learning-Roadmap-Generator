@@ -36,7 +36,6 @@ app.include_router(roadmap_router)
 # Top-level API bindings matching frontend Axios client routes
 @app.post("/register")
 def register_top(user_in: UserCreate, db: Session = Depends(get_db)):
-    # Create or update user
     existing_user = db.query(User).filter(User.email == user_in.email).first()
     if existing_user:
         user_db = existing_user
@@ -68,7 +67,7 @@ def login_top(login_in: UserLogin, db: Session = Depends(get_db)):
             "id": str(user_db.id) if user_db else "1",
             "name": name,
             "email": login_in.email,
-            "study_streak": 12
+            "study_streak": 1
         }
     }
 
@@ -88,36 +87,36 @@ def profile_top(authorization: Optional[str] = Header(None), db: Session = Depen
                     "id": str(user_db.id),
                     "name": user_db.full_name or user_db.email.split("@")[0].capitalize(),
                     "email": user_db.email,
-                    "study_streak": 12
+                    "study_streak": 1
                 }
         except Exception:
             pass
 
     return {
         "id": "1",
-        "name": "Alex Rivera",
-        "email": "alex.rivera@example.com",
-        "study_streak": 12
+        "name": "Learner",
+        "email": "learner@example.com",
+        "study_streak": 1
     }
 
 
 @app.get("/dashboard")
 def dashboard_top():
     return {
-        "active_roadmaps_count": 2,
-        "completed_tasks_count": 14,
-        "total_tasks_count": 24,
-        "overall_progress_percentage": 58,
-        "study_streak_days": 12
+        "active_roadmaps_count": 0,
+        "completed_tasks_count": 0,
+        "total_tasks_count": 0,
+        "overall_progress_percentage": 0,
+        "study_streak_days": 1
     }
 
 
 @app.get("/badges")
 def badges_top():
     return [
-        {"id": 1, "badge_name": "First Roadmap", "unlocked": True, "icon": "🚀"},
-        {"id": 2, "badge_name": "25% Complete", "unlocked": True, "icon": "🥉"},
-        {"id": 3, "badge_name": "50% Complete", "unlocked": True, "icon": "🥈"},
+        {"id": 1, "badge_name": "First Roadmap", "unlocked": False, "icon": "🚀"},
+        {"id": 2, "badge_name": "25% Complete", "unlocked": False, "icon": "🥉"},
+        {"id": 3, "badge_name": "50% Complete", "unlocked": False, "icon": "🥈"},
         {"id": 4, "badge_name": "75% Complete", "unlocked": False, "icon": "🥇"},
         {"id": 5, "badge_name": "100% Mastered", "unlocked": False, "icon": "👑"}
     ]

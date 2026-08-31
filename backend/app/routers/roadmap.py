@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Response
 from typing import Dict, Any, Optional
 
 from app.schemas.request_schema import (
@@ -34,28 +34,31 @@ def modify_by_id(roadmap_id: str, body: Dict[str, Any] = Body(...)):
 @router.get("")
 @router.get("/")
 def list_roadmaps():
-    return [
-        {
-            "id": 101,
-            "goal": "Master Full-Stack Fast-API & React",
-            "difficulty": "Intermediate",
-            "hours_per_week": 15,
-            "budget": "$50",
-            "deadline": "2026-04-30",
-            "progress": 58,
-            "status": "In Progress"
-        }
-    ]
+    return []
 
 
 @router.get("/{roadmap_id}")
 def get_roadmap(roadmap_id: str):
     return {
         "id": roadmap_id,
-        "goal": "Master Full-Stack Fast-API & React",
+        "goal": "Custom AI Personalized Goal",
         "difficulty": "Intermediate",
         "hours_per_week": 15,
         "budget": "$50",
-        "progress": 58,
+        "progress": 0,
         "status": "In Progress"
     }
+
+
+@router.get("/{roadmap_id}/pdf")
+def generate_pdf(roadmap_id: str):
+    content = f"""%PDF-1.4
+LearnPath AI — Personalized Learning Guidebook
+Roadmap ID: {roadmap_id}
+Generated for user active learning journey.
+    """
+    return Response(
+        content=content.encode('utf-8'),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=roadmap_guidebook_{roadmap_id}.pdf"}
+    )
