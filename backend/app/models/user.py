@@ -1,11 +1,8 @@
 import uuid
 from enum import Enum
-
-from sqlalchemy import Column, String, DateTime, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-
 from app.database import Base
 
 
@@ -19,9 +16,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(
-        UUID(as_uuid=True),
+        String(36),
         primary_key=True,
-        default=uuid.uuid4
+        default=lambda: str(uuid.uuid4())
     )
 
     email = Column(
@@ -41,13 +38,9 @@ class User(Base):
     )
 
     default_skill_level = Column(
-        SQLEnum(
-            SkillLevel,
-            name="skill_level_enum",
-            create_type=False
-        ),
+        String,
         nullable=False,
-        server_default="beginner"
+        default="beginner"
     )
 
     created_at = Column(

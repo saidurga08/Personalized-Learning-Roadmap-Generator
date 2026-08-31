@@ -1,6 +1,5 @@
 import uuid
 from enum import Enum
-
 from sqlalchemy import (
     Column,
     Text,
@@ -9,13 +8,10 @@ from sqlalchemy import (
     Numeric,
     DateTime,
     ForeignKey,
-    Enum as SQLEnum
+    JSON
 )
-
-from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-
 from app.database import Base
 
 
@@ -29,19 +25,19 @@ class Roadmap(Base):
     __tablename__ = "roadmaps"
 
     id = Column(
-        UUID(as_uuid=True),
+        String(36),
         primary_key=True,
-        default=uuid.uuid4
+        default=lambda: str(uuid.uuid4())
     )
 
     user_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("users.id"),
         nullable=False
     )
 
     goal_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("goals.id"),
         nullable=True
     )
@@ -57,34 +53,25 @@ class Roadmap(Base):
     )
 
     skill_level = Column(
-        SQLEnum(
-            "beginner",
-            "intermediate",
-            "advanced",
-            name="skill_level_enum",
-            create_type=False
-        ),
-        nullable=False
+        String,
+        nullable=False,
+        default="intermediate"
     )
 
     status = Column(
-        SQLEnum(
-            RoadmapStatus,
-            name="roadmap_status_enum",
-            create_type=False
-        ),
+        String,
         nullable=False,
-        server_default="active"
+        default="active"
     )
 
     progress_percentage = Column(
         Numeric,
         nullable=False,
-        server_default="0.00"
+        default=0.0
     )
 
     roadmap_json = Column(
-        JSONB,
+        JSON,
         nullable=True
     )
 
@@ -115,7 +102,7 @@ class Roadmap(Base):
         back_populates="roadmaps"
     )
 
-    goal = relationship(
+    goal_rel = relationship(
         "Goal",
         back_populates="roadmaps"
     )
