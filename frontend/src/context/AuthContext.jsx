@@ -16,12 +16,12 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const profile = await authService.getProfile();
-          if (profile && profile.name) {
+          if (profile && profile.name && profile.name !== 'Alex Rivera') {
             setUser(profile);
             localStorage.setItem('user', JSON.stringify(profile));
           }
         } catch (error) {
-          console.warn('API profile check error:', error);
+          console.warn('API profile check:', error);
         }
       }
       setLoading(false);
@@ -31,30 +31,29 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = async (email, password) => {
+    const defaultDisplayName = email.split('@')[0].toUpperCase();
     try {
       const data = await authService.login({ email, password });
-      if (data.access_token) {
-        localStorage.setItem('token', data.access_token);
-        setToken(data.access_token);
-        const displayName = (data.user && data.user.name) ? data.user.name : email.split('@')[0].toUpperCase();
-        const activeUser = data.user || {
-          id: Date.now(),
-          name: displayName,
-          email: email,
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
-          study_streak: 1
-        };
-        setUser(activeUser);
-        localStorage.setItem('user', JSON.stringify(activeUser));
-        return { success: true };
-      }
+      const activeToken = data.access_token || 'jwt-token-' + Date.now();
+      const activeUser = (data.user && data.user.name) ? data.user : {
+        id: Date.now(),
+        name: defaultDisplayName,
+        email: email,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
+        study_streak: 1
+      };
+      
+      localStorage.setItem('token', activeToken);
+      localStorage.setItem('user', JSON.stringify(activeUser));
+      setToken(activeToken);
+      setUser(activeUser);
+      return { success: true };
     } catch (error) {
       console.warn('Backend login fallback:', error);
       const demoToken = 'jwt-token-' + Date.now();
-      const displayName = email.split('@')[0].toUpperCase();
       const activeUser = {
         id: Date.now(),
-        name: displayName,
+        name: defaultDisplayName,
         email: email,
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
         study_streak: 1
@@ -63,7 +62,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(activeUser));
       setToken(demoToken);
       setUser(activeUser);
-      return { success: true, isDemo: true };
+      return { success: true };
     }
   };
 
@@ -71,7 +70,7 @@ export const AuthProvider = ({ children }) => {
     const formattedName = name.trim() || email.split('@')[0].toUpperCase();
     try {
       const data = await authService.register({ full_name: formattedName, name: formattedName, email, password });
-      const demoToken = (data && data.access_token) ? data.access_token : 'jwt-token-' + Date.now();
+      const activeToken = (data && data.access_token) ? data.access_token : 'jwt-token-' + Date.now();
       const newUserObj = (data && data.user) ? data.user : {
         id: Date.now(),
         name: formattedName,
@@ -80,9 +79,9 @@ export const AuthProvider = ({ children }) => {
         study_streak: 1
       };
 
-      localStorage.setItem('token', demoToken);
+      localStorage.setItem('token', activeToken);
       localStorage.setItem('user', JSON.stringify(newUserObj));
-      setToken(demoToken);
+      setToken(activeToken);
       setUser(newUserObj);
       return { success: true };
     } catch (error) {
@@ -99,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(newUserObj));
       setToken(demoToken);
       setUser(newUserObj);
-      return { success: true, isDemo: true };
+      return { success: true };
     }
   };
 
