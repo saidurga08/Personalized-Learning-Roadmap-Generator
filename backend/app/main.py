@@ -1,14 +1,16 @@
-from fastapi import FastAPI, Body, Depends, HTTPException
+from fastapi import FastAPI, Body, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from typing import Dict, Any
+from sqlalchemy.orm import Session
+from typing import Dict, Any, Optional
 
-from app.database import Base, engine
-from app.models import *
+from app.database import Base, engine, get_db
+from app.models import User
 from app.routers import auth_router
 from app.routers.roadmap import router as roadmap_router
 from app.schemas.user import UserCreate, UserLogin
 from app.services.auth_service import register_user, authenticate_user
+from app.utils.security import create_access_token
 
 Base.metadata.create_all(bind=engine)
 
@@ -30,23 +32,74 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(roadmap_router)
 
+
 # Top-level API bindings matching frontend Axios client routes
 @app.post("/register")
-def register_top(user_in: UserCreate):
-    return register_user(user_in)
+def register_top(user_in: UserCreate, db: Session = Depends(get_db)):
+    # Create or update user
+    existing_user = db.query(User).filter(User.email == user_in.email).first()
+    if existing_user:
+        user_db = existing_user
+    else:
+        user_db = register_user(user_in, db)
+
+    token = create_access_token({"sub": user_db.email})
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user_db.id),
+            "name": user_db.full_name or user_db.email.split("@")[0].capitalize(),
+            "email": user_db.email,
+            "study_streak": 1
+        }
+    }
+
 
 @app.post("/login")
-def login_top(login_in: UserLogin):
-    return authenticate_user(login_in.email, login_in.password)
+def login_top(login_in: UserLogin, db: Session = Depends(get_db)):
+    res = authenticate_user(login_in, db)
+    user_db = db.query(User).filter(User.email == login_in.email).first()
+    name = (user_db.full_name if user_db and user_db.full_name else login_in.email.split("@")[0].capitalize())
+    return {
+        "access_token": res["access_token"],
+        "token_type": "bearer",
+        "user": {
+            "id": str(user_db.id) if user_db else "1",
+            "name": name,
+            "email": login_in.email,
+            "study_streak": 12
+        }
+    }
+
 
 @app.get("/profile")
-def profile_top():
+def profile_top(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    if authorization and "Bearer " in authorization:
+        token = authorization.split("Bearer ")[1]
+        try:
+            from jose import jwt
+            from app.config import SECRET_KEY, ALGORITHM
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            email = payload.get("sub")
+            user_db = db.query(User).filter(User.email == email).first()
+            if user_db:
+                return {
+                    "id": str(user_db.id),
+                    "name": user_db.full_name or user_db.email.split("@")[0].capitalize(),
+                    "email": user_db.email,
+                    "study_streak": 12
+                }
+        except Exception:
+            pass
+
     return {
         "id": "1",
         "name": "Alex Rivera",
         "email": "alex.rivera@example.com",
         "study_streak": 12
     }
+
 
 @app.get("/dashboard")
 def dashboard_top():
@@ -58,6 +111,7 @@ def dashboard_top():
         "study_streak_days": 12
     }
 
+
 @app.get("/badges")
 def badges_top():
     return [
@@ -68,13 +122,16 @@ def badges_top():
         {"id": 5, "badge_name": "100% Mastered", "unlocked": False, "icon": "👑"}
     ]
 
+
 @app.patch("/tasks/{task_id}")
 def update_task_status(task_id: str, body: Dict[str, Any] = Body(...)):
     return {"status": "success", "task_id": task_id, "completed": body.get("completed", True)}
 
+
 @app.post("/calendar/sync")
 def sync_calendar(body: Dict[str, Any] = Body(...)):
     return {"status": "synced", "calendar": "Google Calendar", "events_created": 4}
+
 
 @app.get("/")
 def root():
@@ -82,6 +139,7 @@ def root():
         "message": "LearnPath AI Full-Stack Unified Backend Running",
         "services": ["Authentication (JWT)", "Groq AI Roadmap Engine", "PostgreSQL DB Persistence"]
     }
+
 
 @app.get("/health")
 def health_check():

@@ -6,11 +6,47 @@ import { mockRoadmaps, mockBadges, mockDashboard } from '../services/mockData';
 const RoadmapContext = createContext(null);
 
 export const RoadmapProvider = ({ children }) => {
-  const [roadmaps, setRoadmaps] = useState(mockRoadmaps);
-  const [badges, setBadges] = useState(mockBadges);
-  const [activeRoadmap, setActiveRoadmap] = useState(mockRoadmaps[0]);
+  const [roadmaps, setRoadmapsState] = useState(() => {
+    const saved = localStorage.getItem('roadmaps');
+    return saved ? JSON.parse(saved) : mockRoadmaps;
+  });
+
+  const [badges, setBadgesState] = useState(() => {
+    const saved = localStorage.getItem('badges');
+    return saved ? JSON.parse(saved) : mockBadges;
+  });
+
+  const [activeRoadmap, setActiveRoadmapState] = useState(() => {
+    const saved = localStorage.getItem('activeRoadmap');
+    return saved ? JSON.parse(saved) : (mockRoadmaps[0] || null);
+  });
+
   const [loading, setLoading] = useState(false);
   const [newBadgeUnlocked, setNewBadgeUnlocked] = useState(null);
+
+  const setRoadmaps = (updater) => {
+    setRoadmapsState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('roadmaps', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setBadges = (updater) => {
+    setBadgesState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('badges', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const setActiveRoadmap = (updater) => {
+    setActiveRoadmapState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('activeRoadmap', JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Trigger confetti effect on milestones & badge unlocks
   const triggerCelebration = () => {
