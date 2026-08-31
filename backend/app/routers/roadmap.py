@@ -31,6 +31,11 @@ def modify_by_id(roadmap_id: str, body: Dict[str, Any] = Body(...)):
     return modify_roadmap(req)
 
 
+@router.delete("/{roadmap_id}")
+def delete_roadmap(roadmap_id: str):
+    return {"status": "success", "message": "Roadmap deleted successfully", "roadmap_id": roadmap_id}
+
+
 @router.get("")
 @router.get("/")
 def list_roadmaps():

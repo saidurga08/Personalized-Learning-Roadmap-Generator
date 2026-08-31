@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, DollarSign, Globe, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, DollarSign, Globe, ArrowRight, Trash2 } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 
-export default function GoalCard({ roadmap, onSelect }) {
+export default function GoalCard({ roadmap, onSelect, onDelete }) {
   const navigate = useNavigate();
 
   const handleOpen = () => {
@@ -11,21 +11,42 @@ export default function GoalCard({ roadmap, onSelect }) {
     navigate(`/roadmap?id=${roadmap.id}`);
   };
 
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (onDelete && window.confirm(`Are you sure you want to delete "${roadmap.goal}"?`)) {
+      onDelete(roadmap.id);
+    }
+  };
+
   return (
     <div className="glass-card rounded-2xl p-5 border border-slate-800 hover:border-indigo-500/40 transition-all duration-300 flex flex-col justify-between group">
       <div>
-        {/* Header Badges */}
+        {/* Header Badges & Actions */}
         <div className="flex items-center justify-between gap-2 mb-3">
-          <span className="px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-indigo-950/80 text-indigo-300 border border-indigo-800/50">
-            {roadmap.difficulty || 'Intermediate'}
-          </span>
-          <span className={`px-2.5 py-1 rounded-full text-xs font-mono font-medium ${
-            roadmap.progress === 100
-              ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
-              : 'bg-amber-950 text-amber-300 border border-amber-800/60'
-          }`}>
-            {roadmap.status || 'In Progress'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-indigo-950/80 text-indigo-300 border border-indigo-800/50">
+              {roadmap.difficulty || 'Intermediate'}
+            </span>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-mono font-medium ${
+              roadmap.progress === 100
+                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                : 'bg-amber-950 text-amber-300 border border-amber-800/60'
+            }`}>
+              {roadmap.status || 'In Progress'}
+            </span>
+          </div>
+
+          {/* Delete Button */}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition-all"
+              title="Delete Roadmap"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Goal Title */}
@@ -54,7 +75,7 @@ export default function GoalCard({ roadmap, onSelect }) {
         </div>
 
         {/* Progress Bar */}
-        <ProgressBar progress={roadmap.progress} size="sm" />
+        <ProgressBar progress={roadmap.progress || 0} size="sm" />
       </div>
 
       {/* Footer CTA Button */}

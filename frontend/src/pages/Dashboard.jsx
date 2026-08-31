@@ -22,16 +22,16 @@ import { useRoadmap } from '../context/RoadmapContext';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { roadmaps, badges, setActiveRoadmap, newBadgeUnlocked } = useRoadmap();
+  const { roadmaps, badges, setActiveRoadmap, deleteRoadmap, newBadgeUnlocked } = useRoadmap();
 
   // Aggregate stats
   const totalTasks = roadmaps.reduce((acc, r) => {
-    const weeks = r.roadmap_json?.weeks || [];
+    const weeks = r.roadmap_json?.weeks || r.roadmap_json?.roadmap?.weeks || [];
     return acc + weeks.reduce((wAcc, w) => wAcc + (w.tasks?.length || 0), 0);
   }, 0);
 
   const completedTasks = roadmaps.reduce((acc, r) => {
-    const weeks = r.roadmap_json?.weeks || [];
+    const weeks = r.roadmap_json?.weeks || r.roadmap_json?.roadmap?.weeks || [];
     return acc + weeks.reduce((wAcc, w) => wAcc + (w.tasks?.filter(t => t.completed).length || 0), 0);
   }, 0);
 
@@ -152,7 +152,12 @@ export default function Dashboard() {
             {roadmaps.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {roadmaps.map((rm) => (
-                  <GoalCard key={rm.id} roadmap={rm} onSelect={setActiveRoadmap} />
+                  <GoalCard
+                    key={rm.id}
+                    roadmap={rm}
+                    onSelect={setActiveRoadmap}
+                    onDelete={deleteRoadmap}
+                  />
                 ))}
               </div>
             ) : (

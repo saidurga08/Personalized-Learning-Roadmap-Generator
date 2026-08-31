@@ -180,6 +180,22 @@ export const RoadmapProvider = ({ children }) => {
     taskService.updateTaskStatus(taskId, true).catch(() => {});
   };
 
+  // Delete a roadmap
+  const deleteRoadmap = async (roadmapId) => {
+    const updatedRoadmaps = roadmaps.filter(r => r.id.toString() !== roadmapId.toString());
+    setRoadmaps(updatedRoadmaps);
+
+    if (activeRoadmap && activeRoadmap.id.toString() === roadmapId.toString()) {
+      setActiveRoadmap(updatedRoadmaps.length > 0 ? updatedRoadmaps[0] : null);
+    }
+
+    try {
+      await roadmapService.deleteRoadmap(roadmapId);
+    } catch (err) {
+      console.warn('Backend delete roadmap error:', err);
+    }
+  };
+
   // Generate a new AI roadmap with full nested unpacking
   const createRoadmap = async (formData) => {
     setLoading(true);
@@ -422,7 +438,8 @@ export const RoadmapProvider = ({ children }) => {
       newBadgeUnlocked,
       toggleTaskCompletion,
       createRoadmap,
-      modifyRoadmap
+      modifyRoadmap,
+      deleteRoadmap
     }}>
       {children}
     </RoadmapContext.Provider>
