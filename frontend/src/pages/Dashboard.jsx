@@ -69,7 +69,7 @@ export default function Dashboard() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-indigo-950 text-indigo-300 border border-indigo-800">
-                    SaaS Dashboard
+                    Personalized SaaS Dashboard
                   </span>
                   <span className="flex items-center gap-1 text-[11px] font-mono text-emerald-400">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" /> AI Ready
@@ -122,7 +122,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-[11px] font-mono text-slate-400 uppercase">Study Streak</p>
-                <p className="text-lg font-bold text-white">{user?.study_streak || 12} Days</p>
+                <p className="text-lg font-bold text-white">{user?.study_streak || 1} Days</p>
               </div>
             </div>
 
@@ -142,18 +142,36 @@ export default function Dashboard() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Layers className="w-5 h-5 text-indigo-400" /> Parallel Active Roadmaps ({roadmaps.length})
+                <Layers className="w-5 h-5 text-indigo-400" /> Active Learning Paths ({roadmaps.length})
               </h2>
               <Link to="/create-goal" className="text-xs font-mono text-indigo-400 hover:underline">
                 + Add New Goal
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {roadmaps.map((rm) => (
-                <GoalCard key={rm.id} roadmap={rm} onSelect={setActiveRoadmap} />
-              ))}
-            </div>
+            {roadmaps.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {roadmaps.map((rm) => (
+                  <GoalCard key={rm.id} roadmap={rm} onSelect={setActiveRoadmap} />
+                ))}
+              </div>
+            ) : (
+              <div className="glass-panel p-10 rounded-3xl border border-indigo-500/30 text-center space-y-4 bg-slate-900/60">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center mx-auto">
+                  <Sparkles className="w-7 h-7 animate-pulse" />
+                </div>
+                <h3 className="text-xl font-bold text-white">No Active Roadmaps Yet</h3>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Welcome to your personal dashboard! You don't have any active learning goals yet. Click below to generate your first AI personalized learning path.
+                </p>
+                <Link
+                  to="/create-goal"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold shadow-lg shadow-indigo-600/30"
+                >
+                  <Plus className="w-4 h-4" /> Create Your First AI Roadmap
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Recent Badges Showcase Section */}

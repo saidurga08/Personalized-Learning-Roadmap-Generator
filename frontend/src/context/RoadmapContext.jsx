@@ -1,41 +1,56 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { roadmapService, taskService, dashboardService } from '../services/api';
-import { mockRoadmaps, mockBadges, mockDashboard } from '../services/mockData';
+import { roadmapService, taskService } from '../services/api';
+import { mockBadges } from '../services/mockData';
+import { useAuth } from './AuthContext';
 
 const RoadmapContext = createContext(null);
 
 export const RoadmapProvider = ({ children }) => {
-  const [roadmaps, setRoadmapsState] = useState(() => {
-    const saved = localStorage.getItem('roadmaps');
-    return saved ? JSON.parse(saved) : mockRoadmaps;
-  });
+  const { user } = useAuth();
+  const userId = user?.id || 'guest';
 
-  const [badges, setBadgesState] = useState(() => {
-    const saved = localStorage.getItem('badges');
-    return saved ? JSON.parse(saved) : mockBadges;
-  });
-
-  const [activeRoadmap, setActiveRoadmapState] = useState(() => {
-    const saved = localStorage.getItem('activeRoadmap');
-    return saved ? JSON.parse(saved) : (mockRoadmaps[0] || null);
-  });
-
+  const [roadmaps, setRoadmapsState] = useState([]);
+  const [activeRoadmap, setActiveRoadmapState] = useState(null);
+  const [badges, setBadgesState] = useState(mockBadges);
   const [loading, setLoading] = useState(false);
   const [newBadgeUnlocked, setNewBadgeUnlocked] = useState(null);
+
+  // Sync roadmaps whenever user changes
+  useEffect(() => {
+    if (user) {
+      const storageKey = `roadmaps_${user.id}`;
+      const activeKey = `activeRoadmap_${user.id}`;
+      const savedRoadmaps = localStorage.getItem(storageKey);
+      const savedActive = localStorage.getItem(activeKey);
+
+      if (savedRoadmaps) {
+        const parsed = JSON.parse(savedRoadmaps);
+        setRoadmapsState(parsed);
+        if (savedActive) {
+          setActiveRoadmapState(JSON.parse(savedActive));
+        } else if (parsed.length > 0) {
+          setActiveRoadmapState(parsed[0]);
+        } else {
+          setActiveRoadmapState(null);
+        }
+      } else {
+        // Brand new user gets clean empty roadmaps list
+        setRoadmapsState([]);
+        setActiveRoadmapState(null);
+      }
+    } else {
+      setRoadmapsState([]);
+      setActiveRoadmapState(null);
+    }
+  }, [user]);
 
   const setRoadmaps = (updater) => {
     setRoadmapsState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      localStorage.setItem('roadmaps', JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const setBadges = (updater) => {
-    setBadgesState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      localStorage.setItem('badges', JSON.stringify(next));
+      if (user?.id) {
+        localStorage.setItem(`roadmaps_${user.id}`, JSON.stringify(next));
+      }
       return next;
     });
   };
@@ -43,7 +58,19 @@ export const RoadmapProvider = ({ children }) => {
   const setActiveRoadmap = (updater) => {
     setActiveRoadmapState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      localStorage.setItem('activeRoadmap', JSON.stringify(next));
+      if (user?.id) {
+        localStorage.setItem(`activeRoadmap_${user.id}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
+  const setBadges = (updater) => {
+    setBadgesState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (user?.id) {
+        localStorage.setItem(`badges_${user.id}`, JSON.stringify(next));
+      }
       return next;
     });
   };
@@ -72,6 +99,7 @@ export const RoadmapProvider = ({ children }) => {
       let shouldUnlock = badge.unlocked;
 
       if (!shouldUnlock) {
+        if (badge.badge_name === 'First Roadmap' && updatedRoadmaps.length >= 1) shouldUnlock = true;
         if (badge.badge_name === '25% Complete' && highestProgress >= 25) shouldUnlock = true;
         if (badge.badge_name === '50% Complete' && highestProgress >= 50) shouldUnlock = true;
         if (badge.badge_name === '75% Complete' && highestProgress >= 75) shouldUnlock = true;
@@ -106,7 +134,7 @@ export const RoadmapProvider = ({ children }) => {
       let totalTasks = 0;
       let completedTasksCount = 0;
 
-      const updatedWeeks = rm.roadmap_json.weeks.map((week, idx) => {
+      const updatedWeeks = (rm.roadmap_json?.weeks || []).map((week, idx) => {
         const isTargetWeek = idx === weekIndex;
         
         const updatedTasks = (week.tasks || []).map(task => {
@@ -154,21 +182,39 @@ export const RoadmapProvider = ({ children }) => {
     taskService.updateTaskStatus(taskId, true).catch(() => {});
   };
 
-  // Generate a new AI roadmap
+  // Generate a new AI roadmap for current user
   const createRoadmap = async (formData) => {
     setLoading(true);
     try {
       const data = await roadmapService.generateRoadmap(formData);
       const newRm = data.roadmap || data;
-      setRoadmaps(prev => [newRm, ...prev]);
-      setActiveRoadmap(newRm);
+      const formattedRm = {
+        id: newRm.id || Date.now(),
+        goal_id: newRm.goal_id || Date.now(),
+        user_id: user?.id,
+        goal: formData.goal || 'Custom Learning Path',
+        difficulty: formData.skill_level || 'Intermediate',
+        hours_per_week: formData.hours_per_week || 10,
+        budget: formData.budget || '$50',
+        deadline: formData.deadline || '2026-06-30',
+        language: formData.language || 'English',
+        progress: 0,
+        status: 'In Progress',
+        updated_at: new Date().toISOString(),
+        roadmap_json: newRm.roadmap_json || newRm
+      };
+
+      setRoadmaps(prev => [formattedRm, ...prev]);
+      setActiveRoadmap(formattedRm);
+      checkBadgeTriggers([formattedRm, ...roadmaps]);
       triggerCelebration();
-      return newRm;
+      return formattedRm;
     } catch (error) {
       console.warn('Backend Groq generation offline, simulating AI roadmap generation:', error);
       const newDemoRoadmap = {
         id: Date.now(),
         goal_id: Date.now(),
+        user_id: user?.id,
         goal: formData.goal || 'Custom AI Learning Goal',
         difficulty: formData.skill_level || 'Intermediate',
         hours_per_week: formData.hours_per_week || 10,
@@ -210,6 +256,7 @@ export const RoadmapProvider = ({ children }) => {
 
       setRoadmaps(prev => [newDemoRoadmap, ...prev]);
       setActiveRoadmap(newDemoRoadmap);
+      checkBadgeTriggers([newDemoRoadmap, ...roadmaps]);
       triggerCelebration();
       return newDemoRoadmap;
     } finally {
@@ -259,7 +306,7 @@ export const RoadmapProvider = ({ children }) => {
     } catch (error) {
       console.warn('API modification error, applying local AI adaptation:', error);
       const current = roadmaps.find(r => r.id.toString() === roadmapId.toString()) || activeRoadmap;
-      const modifiedWeeks = (current.roadmap_json.weeks || []).map(w => ({
+      const modifiedWeeks = (current.roadmap_json?.weeks || []).map(w => ({
         ...w,
         title: `${w.title} (Re-planned)`,
         description: `Modified workload: "${modificationPrompt}"`
