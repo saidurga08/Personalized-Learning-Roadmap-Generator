@@ -1,11 +1,12 @@
 import json
 
 def build_generation_prompt(request):
+    weeks_count = getattr(request, 'weeks_duration', 6) or 6
 
     prompt = f"""
 You are PathQuest AI.
 
-Generate a personalized learning roadmap.
+Generate a personalized learning roadmap for EXACTLY {weeks_count} weeks.
 
 Return ONLY valid JSON.
 
@@ -15,29 +16,31 @@ DO NOT explain anything.
 
 DO NOT change field names.
 
-Generate a roadmap between 6 and 8 weeks unless the user explicitly asks for longer.
+The roadmap MUST contain EXACTLY {weeks_count} week items in the "weeks" array (from week_number 1 to {weeks_count}).
 
-Each week should contain at most 2 topics.
+Each week should be specifically focused on the user's goal: "{request.goal}".
 
-Each topic should contain at most 2 resources.
+Each week should contain at least 2 topics.
+
+Each topic should contain relevant resources.
 
 Return JSON in EXACTLY this format:
 
 {{
-  "title": "Machine Learning Foundations with Python",
-  "goal": "Master Machine Learning with Python",
-  "skill_level": "beginner",
-  "estimated_duration_weeks": 8,
-  "total_estimated_hours": 100,
-  "overview": "A short overview.",
+  "title": "{request.goal} Master Roadmap",
+  "goal": "{request.goal}",
+  "skill_level": "{request.skill_level}",
+  "estimated_duration_weeks": {weeks_count},
+  "total_estimated_hours": {float(request.hours_per_week) * weeks_count},
+  "overview": "A personalized learning roadmap for {request.goal}.",
   "weeks": [
     {{
       "week_number": 1,
-      "title": "Week title",
-      "description": "Week description",
-      "estimated_hours": 12.5,
-      "milestone": "Milestone",
-      "assignment": "Assignment",
+      "title": "Week 1 title",
+      "description": "Week 1 description",
+      "estimated_hours": {request.hours_per_week},
+      "milestone": "Milestone 1",
+      "assignment": "Assignment 1",
       "topics": [
         {{
           "title": "Topic title",
@@ -46,7 +49,7 @@ Return JSON in EXACTLY this format:
           "resources": [
             {{
               "title": "Resource title",
-              "url": "https://...",
+              "url": "https://developer.mozilla.org/",
               "type": "video",
               "is_free": true
             }}
@@ -57,7 +60,7 @@ Return JSON in EXACTLY this format:
   ]
 }}
 
-User Constraints
+User Constraints:
 
 Goal:
 {request.goal}
@@ -68,6 +71,9 @@ Skill Level:
 Hours Per Week:
 {request.hours_per_week}
 
+Target Weeks Duration:
+{weeks_count}
+
 Budget:
 {request.budget}
 
@@ -77,25 +83,7 @@ Learning Method:
 Prior Experience:
 {request.prior_experience}
 
-Updated Constraints Rules:
-
-Return the updated constraints in the "constraints" object.
-
-The value of "learning_method" MUST be exactly one of:
-
-- videos
-- text 
-- both (videos and text)
-
-Do NOT return values like:
-- online
-- offline
-- self-paced
-- hybrid
-
-The value MUST match the database enum exactly.
-
-Return ONLY JSON.
+Return ONLY raw JSON.
 """
 
     return prompt
@@ -119,19 +107,7 @@ The user wants to modify it.
 
 Your job is to generate a NEW updated roadmap that satisfies the user's request.
 
-You may:
-- change the duration
-- change study hours
-- change the budget
-- replace resources
-- reorder weeks
-- remove completed topics
-- add new topics
-- compress or expand the schedule
-- reschedule missed work
-- modify milestones
-
-BUT preserve the user's overall learning goal unless explicitly changed.
+Preserve the user's overall learning goal unless explicitly changed.
 
 Return ONLY valid JSON.
 
@@ -144,10 +120,10 @@ Return EXACTLY this JSON structure:
 {{
   "constraints":
   {{
-      "hours_per_week": integer,
-      "budget": integer,
-      "learning_method": string,
-      "prior_experience": string
+      "hours_per_week": 15,
+      "budget": 50,
+      "learning_method": "both (videos and text)",
+      "prior_experience": "Intermediate"
   }},
 
   "roadmap":
@@ -155,8 +131,8 @@ Return EXACTLY this JSON structure:
       "title": "...",
       "goal": "...",
       "skill_level": "...",
-      "estimated_duration_weeks": integer,
-      "total_estimated_hours": integer,
+      "estimated_duration_weeks": 6,
+      "total_estimated_hours": 90,
       "overview": "...",
       "weeks": [
           ...
@@ -171,24 +147,6 @@ Current Roadmap:
 User Request:
 
 {user_message}
-
-Updated Constraints Rules:
-
-Return the updated constraints in the "constraints" object.
-
-The value of "learning_method" MUST be exactly one of:
-
-- videos
-- text
-- both (text and video)
-
-Do NOT return values like:
-- online
-- offline
-- self-paced
-- hybrid
-
-The value MUST match the database enum exactly.
 
 Return ONLY raw JSON.
 """

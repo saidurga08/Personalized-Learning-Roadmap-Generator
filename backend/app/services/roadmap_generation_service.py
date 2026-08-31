@@ -14,7 +14,7 @@ TEST_USER_ID = "ce753051-0512-4c08-b38f-c7f338bac676"
 
 def generate_roadmap(request):
     prompt = build_generation_prompt(request)
-    result = generate_response(prompt)
+    result = generate_response(prompt, request)
 
     roadmap_obj = getattr(result, 'roadmap', result)
 
