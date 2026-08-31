@@ -9,7 +9,6 @@ import {
   FileText, 
   Sliders, 
   Flag,
-  Lightbulb,
   Clock,
   Layers
 } from 'lucide-react';
@@ -35,7 +34,7 @@ export default function Timeline({ roadmap }) {
   }
 
   const { roadmap_json, progress, id } = roadmap;
-  const weeks = roadmap_json.weeks || [];
+  const weeks = roadmap_json.weeks || roadmap_json.roadmap?.weeks || [];
 
   const toggleWeek = (index) => {
     setOpenWeeks(prev => ({ ...prev, [index]: !prev[index] }));
@@ -62,14 +61,14 @@ export default function Timeline({ roadmap }) {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800/60">
-                {roadmap.difficulty} Level
+                {roadmap.difficulty || 'Intermediate'} Level
               </span>
               <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-purple-950 text-purple-300 border border-purple-800/60 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {roadmap_json.duration || '12 Weeks'}
+                <Clock className="w-3 h-3" /> {roadmap_json.duration || `${weeks.length} Weeks`}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {roadmap_json.goal}
+              {roadmap_json.goal || roadmap.goal || 'Custom Learning Roadmap'}
             </h1>
           </div>
 
@@ -95,7 +94,7 @@ export default function Timeline({ roadmap }) {
 
         {/* Progress Bar & Key Details */}
         <div className="pt-4 border-t border-slate-800/80">
-          <ProgressBar progress={progress} size="md" />
+          <ProgressBar progress={progress || 0} size="md" />
         </div>
       </div>
 
@@ -142,7 +141,7 @@ export default function Timeline({ roadmap }) {
                       ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
                       : 'bg-indigo-950 text-indigo-300 border-indigo-800'
                   }`}>
-                    W{week.week}
+                    W{week.week || weekIdx + 1}
                   </div>
 
                   <div>
@@ -181,7 +180,7 @@ export default function Timeline({ roadmap }) {
                       <div className="flex flex-wrap gap-2">
                         {week.topics.map((topic, i) => (
                           <span key={i} className="px-2.5 py-1 rounded-lg text-xs bg-slate-800 text-slate-200 border border-slate-700/60">
-                            {topic}
+                            {typeof topic === 'string' ? topic : (topic.title || topic.name)}
                           </span>
                         ))}
                       </div>
@@ -216,13 +215,13 @@ export default function Timeline({ roadmap }) {
                         {week.resources.map((res, i) => (
                           <a
                             key={i}
-                            href={res.url}
+                            href={res.url || 'https://developer.mozilla.org/'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-950 text-indigo-300 text-xs border border-indigo-800/40 transition-colors"
                           >
                             <BookOpen className="w-3.5 h-3.5" />
-                            <span>{res.title}</span>
+                            <span>{res.title || 'Resource'}</span>
                             <ExternalLink className="w-3 h-3 opacity-60" />
                           </a>
                         ))}

@@ -8,8 +8,6 @@ const RoadmapContext = createContext(null);
 
 export const RoadmapProvider = ({ children }) => {
   const { user } = useAuth();
-  const userId = user?.id || 'guest';
-
   const [roadmaps, setRoadmapsState] = useState([]);
   const [activeRoadmap, setActiveRoadmapState] = useState(null);
   const [badges, setBadgesState] = useState(mockBadges);
@@ -35,7 +33,6 @@ export const RoadmapProvider = ({ children }) => {
           setActiveRoadmapState(null);
         }
       } else {
-        // Brand new user gets clean empty roadmaps list
         setRoadmapsState([]);
         setActiveRoadmapState(null);
       }
@@ -134,7 +131,9 @@ export const RoadmapProvider = ({ children }) => {
       let totalTasks = 0;
       let completedTasksCount = 0;
 
-      const updatedWeeks = (rm.roadmap_json?.weeks || []).map((week, idx) => {
+      const rawWeeks = rm.roadmap_json?.weeks || rm.roadmap_json?.roadmap?.weeks || [];
+
+      const updatedWeeks = rawWeeks.map((week, idx) => {
         const isTargetWeek = idx === weekIndex;
         
         const updatedTasks = (week.tasks || []).map(task => {
@@ -178,44 +177,78 @@ export const RoadmapProvider = ({ children }) => {
     setRoadmaps(updatedRoadmaps);
     checkBadgeTriggers(updatedRoadmaps);
 
-    // Call backend async without blocking UI
     taskService.updateTaskStatus(taskId, true).catch(() => {});
   };
 
-  // Generate a new AI roadmap for current user
+  // Generate a new AI roadmap with full nested unpacking
   const createRoadmap = async (formData) => {
     setLoading(true);
     try {
       const data = await roadmapService.generateRoadmap(formData);
-      const newRm = data.roadmap || data;
-      const formattedRm = {
-        id: newRm.id || Date.now(),
-        goal_id: newRm.goal_id || Date.now(),
-        user_id: user?.id,
-        goal: formData.goal || 'Custom Learning Path',
-        difficulty: formData.skill_level || 'Intermediate',
-        hours_per_week: formData.hours_per_week || 10,
-        budget: formData.budget || '$50',
-        deadline: formData.deadline || '2026-06-30',
-        language: formData.language || 'English',
-        progress: 0,
-        status: 'In Progress',
-        updated_at: new Date().toISOString(),
-        roadmap_json: newRm.roadmap_json || newRm
-      };
+      
+      const rawObj = data.roadmap || data;
+      const innerRoadmap = rawObj.roadmap || rawObj.roadmap_json || rawObj;
+      const goalTitle = innerRoadmap.goal || innerRoadmap.title || formData.goal || 'Custom AI Learning Goal';
+      
+      const rawWeeks = innerRoadmap.weeks || rawObj.weeks || [];
+      const targetWeeksCount = formData.weeks_duration || 6;
+      
+      const weeksToFormat = rawWeeks.length > 0 ? rawWeeks : Array.from({ length: targetWeeksCount });
 
-      setRoadmaps(prev => [formattedRm, ...prev]);
-      setActiveRoadmap(formattedRm);
-      checkBadgeTriggers([formattedRm, ...roadmaps]);
-      triggerCelebration();
-      return formattedRm;
-    } catch (error) {
-      console.warn('Backend Groq generation offline, simulating AI roadmap generation:', error);
-      const newDemoRoadmap = {
-        id: Date.now(),
+      const formattedWeeks = weeksToFormat.map((w = {}, idx) => {
+        const weekNum = w.week_number || w.week || idx + 1;
+        const moduleTitle = w.title || `Module ${weekNum}: ${goalTitle} Core Concepts`;
+        const moduleDesc = w.description || `Comprehensive study module tailored for ${formData.skill_level || 'Intermediate'} level learners.`;
+        
+        const topics = (w.topics || []).map(t => typeof t === 'string' ? t : (t.title || t.name || 'Core Topic'));
+        if (topics.length === 0) {
+          topics.push(`Architecture & Patterns for ${goalTitle}`, `Hands-on Practical Lab #${weekNum}`, `Best Practices & Testing`);
+        }
+
+        const resources = (w.resources || []).map(r => ({
+          title: r.title || `${goalTitle} Reference Docs`,
+          url: r.url || 'https://developer.mozilla.org/',
+          type: r.type || 'Documentation'
+        }));
+        if (resources.length === 0) {
+          resources.push(
+            { title: `${goalTitle} Official Documentation`, url: 'https://developer.mozilla.org/', type: 'Documentation' },
+            { title: `Mastering ${goalTitle} Video Guide`, url: 'https://youtube.com', type: 'Video' }
+          );
+        }
+
+        const rawTasks = w.tasks || [];
+        const tasks = rawTasks.map((t, tIdx) => ({
+          id: t.id || Date.now() + idx * 10 + tIdx + 1,
+          title: typeof t === 'string' ? t : (t.title || t.name || `Task ${tIdx + 1}`),
+          completed: false
+        }));
+        if (tasks.length === 0) {
+          tasks.push(
+            { id: Date.now() + idx * 10 + 1, title: `Read module study guide for Week ${weekNum}`, completed: false },
+            { id: Date.now() + idx * 10 + 2, title: `Complete hands-on coding lab #${weekNum}`, completed: false },
+            { id: Date.now() + idx * 10 + 3, title: `Submit weekly assessment assignment`, completed: false }
+          );
+        }
+
+        return {
+          week: weekNum,
+          title: moduleTitle,
+          description: moduleDesc,
+          completed: false,
+          topics,
+          resources,
+          assignment: w.assignment || `Build functional ${goalTitle} mini-project for Week ${weekNum}.`,
+          milestone: w.milestone || `Milestone ${weekNum}: Pass Week ${weekNum} practical assessment.`,
+          tasks
+        };
+      });
+
+      const formattedRm = {
+        id: data.roadmap_id || Date.now(),
         goal_id: Date.now(),
         user_id: user?.id,
-        goal: formData.goal || 'Custom AI Learning Goal',
+        goal: goalTitle,
         difficulty: formData.skill_level || 'Intermediate',
         hours_per_week: formData.hours_per_week || 10,
         budget: formData.budget || 'Free',
@@ -225,32 +258,65 @@ export const RoadmapProvider = ({ children }) => {
         status: 'In Progress',
         updated_at: new Date().toISOString(),
         roadmap_json: {
-          goal: formData.goal || 'Custom AI Learning Goal',
-          duration: `${formData.weeks_duration || 8} Weeks`,
-          total_hours: (formData.hours_per_week || 10) * (formData.weeks_duration || 8),
-          weeks: Array.from({ length: formData.weeks_duration || 6 }).map((_, idx) => ({
-            week: idx + 1,
-            title: `Module ${idx + 1}: ${formData.goal} Core Concepts Part ${idx + 1}`,
-            description: `Comprehensive study plan tailored for ${formData.skill_level || 'Intermediate'} level learners in ${formData.language || 'English'}.`,
-            completed: false,
-            topics: [
-              `Fundamental architecture & key patterns`,
-              `Hands-on practical exercise #${idx + 1}`,
-              `Industry best practices & performance tuning`,
-              `Debugging & automated unit testing`
-            ],
-            resources: [
-              { title: `${formData.goal} Reference Documentation`, url: 'https://developer.mozilla.org/', type: 'Documentation' },
-              { title: `Mastering ${formData.goal} Video Course`, url: 'https://youtube.com', type: 'Video' }
-            ],
-            assignment: `Build a functional ${formData.goal} mini-project for Week ${idx + 1}.`,
-            milestone: `Milestone ${idx + 1}: Pass Week ${idx + 1} practical assessment.`,
-            tasks: [
-              { id: Date.now() + idx * 10 + 1, title: `Read module guide for Week ${idx + 1}`, completed: false },
-              { id: Date.now() + idx * 10 + 2, title: `Complete hands-on coding lab #${idx + 1}`, completed: false },
-              { id: Date.now() + idx * 10 + 3, title: `Submit weekly assignment project`, completed: false }
-            ]
-          }))
+          goal: goalTitle,
+          duration: `${formattedWeeks.length} Weeks`,
+          total_hours: (formData.hours_per_week || 10) * formattedWeeks.length,
+          weeks: formattedWeeks
+        }
+      };
+
+      setRoadmaps(prev => [formattedRm, ...prev]);
+      setActiveRoadmap(formattedRm);
+      checkBadgeTriggers([formattedRm, ...roadmaps]);
+      triggerCelebration();
+      return formattedRm;
+    } catch (error) {
+      console.warn('Backend Groq generation offline, simulating AI roadmap generation:', error);
+      const goalTitle = formData.goal || 'Custom AI Learning Goal';
+      const targetWeeksCount = formData.weeks_duration || 6;
+
+      const formattedWeeks = Array.from({ length: targetWeeksCount }).map((_, idx) => ({
+        week: idx + 1,
+        title: `Module ${idx + 1}: ${goalTitle} Core Concepts`,
+        description: `Comprehensive study plan tailored for ${formData.skill_level || 'Intermediate'} level.`,
+        completed: false,
+        topics: [
+          `Fundamental architecture & key patterns`,
+          `Hands-on practical exercise #${idx + 1}`,
+          `Industry best practices & performance tuning`,
+          `Debugging & automated unit testing`
+        ],
+        resources: [
+          { title: `${goalTitle} Reference Documentation`, url: 'https://developer.mozilla.org/', type: 'Documentation' },
+          { title: `Mastering ${goalTitle} Video Course`, url: 'https://youtube.com', type: 'Video' }
+        ],
+        assignment: `Build a functional ${goalTitle} mini-project for Week ${idx + 1}.`,
+        milestone: `Milestone ${idx + 1}: Pass Week ${idx + 1} practical assessment.`,
+        tasks: [
+          { id: Date.now() + idx * 10 + 1, title: `Read module guide for Week ${idx + 1}`, completed: false },
+          { id: Date.now() + idx * 10 + 2, title: `Complete hands-on coding lab #${idx + 1}`, completed: false },
+          { id: Date.now() + idx * 10 + 3, title: `Submit weekly assignment project`, completed: false }
+        ]
+      }));
+
+      const newDemoRoadmap = {
+        id: Date.now(),
+        goal_id: Date.now(),
+        user_id: user?.id,
+        goal: goalTitle,
+        difficulty: formData.skill_level || 'Intermediate',
+        hours_per_week: formData.hours_per_week || 10,
+        budget: formData.budget || 'Free',
+        deadline: formData.deadline || '2026-06-30',
+        language: formData.language || 'English',
+        progress: 0,
+        status: 'In Progress',
+        updated_at: new Date().toISOString(),
+        roadmap_json: {
+          goal: goalTitle,
+          duration: `${targetWeeksCount} Weeks`,
+          total_hours: (formData.hours_per_week || 10) * targetWeeksCount,
+          weeks: formattedWeeks
         }
       };
 
@@ -269,35 +335,51 @@ export const RoadmapProvider = ({ children }) => {
     setLoading(true);
     try {
       const updated = await roadmapService.modifyRoadmap(roadmapId, { modification_prompt: modificationPrompt });
-      
       const current = roadmaps.find(r => r.id.toString() === roadmapId.toString()) || activeRoadmap;
-      let normalizedRm = updated;
+      
+      const rawObj = updated.roadmap || updated;
+      const innerRoadmap = rawObj.roadmap || rawObj.roadmap_json || rawObj;
+      const rawWeeks = innerRoadmap.weeks || rawObj.weeks || current?.roadmap_json?.weeks || [];
 
-      if (updated && (updated.roadmap || updated.weeks || updated.roadmap_json)) {
-        const rawWeeks = updated.roadmap?.weeks || updated.weeks || updated.roadmap_json?.weeks || [];
-        
-        normalizedRm = {
-          ...current,
-          updated_at: new Date().toISOString(),
-          roadmap_json: {
-            ...current.roadmap_json,
-            weeks: rawWeeks.map((w, idx) => ({
-              week: w.week_number || w.week || idx + 1,
-              title: w.title,
-              description: w.description || `Module re-optimized for: "${modificationPrompt}"`,
-              completed: false,
-              topics: (w.topics || []).map(t => typeof t === 'string' ? t : t.title),
-              resources: (w.resources || []).map(r => ({ title: r.title || 'Documentation', url: r.url || 'https://fastapi.tiangolo.com/', type: r.type || 'Guide' })),
-              assignment: w.assignment || `Complete Week ${idx + 1} practical exercise`,
-              milestone: w.milestone || `Milestone ${idx + 1}`,
-              tasks: [
-                { id: Date.now() + idx * 20 + 1, title: `Study ${w.title}`, completed: false },
-                { id: Date.now() + idx * 20 + 2, title: `Complete assignment: ${w.assignment || 'Practical Exercise'}`, completed: false }
-              ]
-            }))
-          }
+      const formattedWeeks = rawWeeks.map((w, idx) => {
+        const weekNum = w.week_number || w.week || idx + 1;
+        const topics = (w.topics || []).map(t => typeof t === 'string' ? t : (t.title || t.name || 'Topic'));
+        const resources = (w.resources || []).map(r => ({
+          title: r.title || 'Guide',
+          url: r.url || 'https://developer.mozilla.org/',
+          type: r.type || 'Documentation'
+        }));
+        const rawTasks = w.tasks || [];
+        const tasks = rawTasks.length > 0 ? rawTasks.map((t, tIdx) => ({
+          id: t.id || Date.now() + idx * 20 + tIdx + 1,
+          title: typeof t === 'string' ? t : (t.title || t.name || `Task ${tIdx + 1}`),
+          completed: false
+        })) : [
+          { id: Date.now() + idx * 20 + 1, title: `Study ${w.title || 'Module'}`, completed: false },
+          { id: Date.now() + idx * 20 + 2, title: `Complete assignment: ${w.assignment || 'Practical Exercise'}`, completed: false }
+        ];
+
+        return {
+          week: weekNum,
+          title: w.title || `Module ${weekNum}: Re-optimized Module`,
+          description: w.description || `Module re-planned for request: "${modificationPrompt}"`,
+          completed: false,
+          topics,
+          resources,
+          assignment: w.assignment || `Complete Week ${weekNum} exercise`,
+          milestone: w.milestone || `Milestone ${weekNum}`,
+          tasks
         };
-      }
+      });
+
+      const normalizedRm = {
+        ...current,
+        updated_at: new Date().toISOString(),
+        roadmap_json: {
+          ...current.roadmap_json,
+          weeks: formattedWeeks
+        }
+      };
 
       setActiveRoadmap(normalizedRm);
       setRoadmaps(prev => prev.map(r => r.id.toString() === roadmapId.toString() ? normalizedRm : r));
