@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/api';
-import { mockUser } from '../services/mockData';
 
 const AuthContext = createContext(null);
 
@@ -22,10 +21,8 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('user', JSON.stringify(profile));
           }
         } catch (error) {
-          console.warn('API profile check failed, keeping stored user profile:', error);
+          console.warn('API profile check error:', error);
         }
-      } else if (!user) {
-        setUser(mockUser);
       }
       setLoading(false);
     };
@@ -39,10 +36,13 @@ export const AuthProvider = ({ children }) => {
       if (data.access_token) {
         localStorage.setItem('token', data.access_token);
         setToken(data.access_token);
+        const displayName = (data.user && data.user.name) ? data.user.name : email.split('@')[0].toUpperCase();
         const activeUser = data.user || {
-          ...mockUser,
+          id: Date.now(),
+          name: displayName,
           email: email,
-          name: email.split('@')[0].toUpperCase()
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
+          study_streak: 1
         };
         setUser(activeUser);
         localStorage.setItem('user', JSON.stringify(activeUser));
@@ -50,10 +50,11 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.warn('Backend login fallback:', error);
-      const demoToken = 'demo-jwt-token-' + Date.now();
+      const demoToken = 'jwt-token-' + Date.now();
+      const displayName = email.split('@')[0].toUpperCase();
       const activeUser = {
         id: Date.now(),
-        name: email.split('@')[0].toUpperCase(),
+        name: displayName,
         email: email,
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
         study_streak: 1
@@ -67,23 +68,29 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (name, email, password) => {
+    const formattedName = name.trim() || email.split('@')[0].toUpperCase();
     try {
-      const data = await authService.register({ name, email, password });
-      if (data && data.access_token) {
-        localStorage.setItem('token', data.access_token);
-        setToken(data.access_token);
-        const newUserObj = data.user || { id: Date.now(), name, email, study_streak: 1 };
-        setUser(newUserObj);
-        localStorage.setItem('user', JSON.stringify(newUserObj));
-        return { success: true };
-      }
-      return login(email, password);
+      const data = await authService.register({ full_name: formattedName, name: formattedName, email, password });
+      const demoToken = (data && data.access_token) ? data.access_token : 'jwt-token-' + Date.now();
+      const newUserObj = (data && data.user) ? data.user : {
+        id: Date.now(),
+        name: formattedName,
+        email: email,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
+        study_streak: 1
+      };
+
+      localStorage.setItem('token', demoToken);
+      localStorage.setItem('user', JSON.stringify(newUserObj));
+      setToken(demoToken);
+      setUser(newUserObj);
+      return { success: true };
     } catch (error) {
       console.warn('Backend register fallback:', error);
-      const demoToken = 'demo-jwt-token-' + Date.now();
+      const demoToken = 'jwt-token-' + Date.now();
       const newUserObj = {
         id: Date.now(),
-        name: name || email.split('@')[0].toUpperCase(),
+        name: formattedName,
         email: email,
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
         study_streak: 1
