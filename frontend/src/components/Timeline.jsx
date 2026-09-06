@@ -41,7 +41,16 @@ export default function Timeline({ roadmap }) {
   };
 
   const handleExportPdf = () => {
-    window.open(integrationService.exportPdfUrl(id), '_blank');
+    const goalTitle = roadmap_json?.goal || roadmap?.goal || 'Personalized AI Goal';
+    const params = new URLSearchParams({
+      goal: goalTitle,
+      difficulty: roadmap?.difficulty || 'Intermediate',
+      hours_per_week: String(roadmap?.hours_per_week || 15),
+      weeks_duration: String(weeks.length || 6)
+    });
+
+    const exportUrl = `${integrationService.exportPdfUrl(id)}?${params.toString()}`;
+    window.open(exportUrl, '_blank');
   };
 
   const handleModifySubmit = async (e) => {
