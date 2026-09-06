@@ -1,4 +1,5 @@
 import io
+import urllib.parse
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -194,24 +195,36 @@ def generate_roadmap_pdf(roadmap_data: dict) -> bytes:
             week_elements.append(task_table)
             week_elements.append(Spacer(1, 6))
 
-        # Curated Resources
+        # Curated Resources with explicit link URLs
         resources = week.get("resources") or []
+        if not resources and week.get("topics"):
+            for top in week.get("topics"):
+                if isinstance(top, dict) and top.get("resources"):
+                    resources.extend(top.get("resources"))
+
+        if not resources:
+            goal_query = urllib.parse.quote(f"{goal_title} week {week_num} tutorial")
+            resources = [
+                {"title": f"{goal_title} Video Tutorial & Course (Week {week_num})", "url": f"https://www.youtube.com/results?search_query={goal_query}", "type": "Video"},
+                {"title": f"{goal_title} Official Documentation Guide", "url": f"https://developer.mozilla.org/en-US/search?q={urllib.parse.quote(goal_title)}", "type": "Documentation"}
+            ]
+
         if resources:
-            week_elements.append(Paragraph("Curated Learning Resources", h3_style))
+            week_elements.append(Paragraph("Curated Learning Resources & Links", h3_style))
             res_rows = []
             for res in resources:
-                r_title = res.get("title") or "Guide"
-                r_url = res.get("url") or "https://developer.mozilla.org/"
+                r_title = res.get("title") or "Learning Guide"
+                r_url = res.get("url") or f"https://www.youtube.com/results?search_query={urllib.parse.quote(goal_title + ' tutorial')}"
                 r_type = res.get("type") or "Resource"
                 res_rows.append([
                     Paragraph(f"<b>[{r_type.upper()}]</b>", ParagraphStyle('TypeLabel', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ACCENT)),
-                    Paragraph(f"<b>{r_title}:</b> <font color='#2563EB'><u><a href='{r_url}'>{r_url}</a></u></font>", resource_link_style)
+                    Paragraph(f"<b>{r_title}</b><br/><font color='#2563EB'><u><a href='{r_url}'>{r_url}</a></u></font>", resource_link_style)
                 ])
             
             res_table = Table(res_rows, colWidths=[80, 460])
             res_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('PADDING', (0, 0), (-1, -1), 2),
+                ('PADDING', (0, 0), (-1, -1), 3),
             ]))
             week_elements.append(res_table)
             week_elements.append(Spacer(1, 6))
