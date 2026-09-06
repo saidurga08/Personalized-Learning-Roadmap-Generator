@@ -216,36 +216,45 @@ export const RoadmapProvider = ({ children }) => {
         const moduleTitle = w.title || `Module ${weekNum}: ${goalTitle} Core Concepts`;
         const moduleDesc = w.description || `Comprehensive study module tailored for ${formData.skill_level || 'Intermediate'} level learners.`;
         
+        // Extract topics
         const topics = (w.topics || []).map(t => typeof t === 'string' ? t : (t.title || t.name || 'Core Topic'));
         if (topics.length === 0) {
-          topics.push(`Architecture & Patterns for ${goalTitle}`, `Hands-on Practical Lab #${weekNum}`, `Best Practices & Testing`);
+          topics.push(`Architecture & Patterns for ${goalTitle}`, `Hands-on Practical Lab #${weekNum}`, `Best Practices & Optimization`);
         }
 
-        const resources = (w.resources || []).map(r => ({
-          title: r.title || `${goalTitle} Reference Docs`,
-          url: r.url || 'https://developer.mozilla.org/',
-          type: r.type || 'Documentation'
+        // Extract resources from week level or nested topics level
+        let rawResList = [];
+        if (w.resources && Array.isArray(w.resources) && w.resources.length > 0) {
+          rawResList = w.resources;
+        } else if (w.topics && Array.isArray(w.topics)) {
+          w.topics.forEach(top => {
+            if (top && top.resources && Array.isArray(top.resources)) {
+              rawResList.push(...top.resources);
+            }
+          });
+        }
+
+        const resources = rawResList.map(r => ({
+          title: r.title || `${goalTitle} Guide`,
+          url: r.url || `https://www.youtube.com/results?search_query=${encodeURIComponent(goalTitle + ' tutorial')}`,
+          type: r.type || 'Resource'
         }));
+
         if (resources.length === 0) {
           resources.push(
-            { title: `${goalTitle} Official Documentation`, url: 'https://developer.mozilla.org/', type: 'Documentation' },
-            { title: `Mastering ${goalTitle} Video Guide`, url: 'https://youtube.com', type: 'Video' }
+            { title: `${goalTitle} Complete Video Tutorial & Walkthrough`, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(goalTitle + ' week ' + weekNum + ' tutorial')}`, type: 'Video' },
+            { title: `${goalTitle} Official Documentation & API Reference`, url: `https://developer.mozilla.org/en-US/search?q=${encodeURIComponent(goalTitle)}`, type: 'Documentation' },
+            { title: `Interactive ${goalTitle} Learning Course`, url: 'https://www.freecodecamp.org/', type: 'Course' }
           );
         }
 
+        // Extract tasks
         const rawTasks = w.tasks || [];
         const tasks = rawTasks.map((t, tIdx) => ({
           id: t.id || Date.now() + idx * 10 + tIdx + 1,
           title: typeof t === 'string' ? t : (t.title || t.name || `Task ${tIdx + 1}`),
-          completed: false
+          completed: Boolean(t.completed)
         }));
-        if (tasks.length === 0) {
-          tasks.push(
-            { id: Date.now() + idx * 10 + 1, title: `Read module study guide for Week ${weekNum}`, completed: false },
-            { id: Date.now() + idx * 10 + 2, title: `Complete hands-on coding lab #${weekNum}`, completed: false },
-            { id: Date.now() + idx * 10 + 3, title: `Submit weekly assessment assignment`, completed: false }
-          );
-        }
 
         return {
           week: weekNum,
@@ -304,7 +313,7 @@ export const RoadmapProvider = ({ children }) => {
         ],
         resources: [
           { title: `${goalTitle} Reference Documentation`, url: 'https://developer.mozilla.org/', type: 'Documentation' },
-          { title: `Mastering ${goalTitle} Video Course`, url: 'https://youtube.com', type: 'Video' }
+          { title: `Mastering ${goalTitle} Video Course`, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(goalTitle + ' tutorial')}`, type: 'Video' }
         ],
         assignment: `Build a functional ${goalTitle} mini-project for Week ${idx + 1}.`,
         milestone: `Milestone ${idx + 1}: Pass Week ${idx + 1} practical assessment.`,
@@ -360,11 +369,31 @@ export const RoadmapProvider = ({ children }) => {
       const formattedWeeks = rawWeeks.map((w, idx) => {
         const weekNum = w.week_number || w.week || idx + 1;
         const topics = (w.topics || []).map(t => typeof t === 'string' ? t : (t.title || t.name || 'Topic'));
-        const resources = (w.resources || []).map(r => ({
-          title: r.title || 'Guide',
-          url: r.url || 'https://developer.mozilla.org/',
+        
+        let rawResList = [];
+        if (w.resources && Array.isArray(w.resources) && w.resources.length > 0) {
+          rawResList = w.resources;
+        } else if (w.topics && Array.isArray(w.topics)) {
+          w.topics.forEach(top => {
+            if (top && top.resources && Array.isArray(top.resources)) {
+              rawResList.push(...top.resources);
+            }
+          });
+        }
+
+        const resources = rawResList.map(r => ({
+          title: r.title || 'Resource',
+          url: r.url || `https://www.youtube.com/results?search_query=${encodeURIComponent(w.title || 'tutorial')}`,
           type: r.type || 'Documentation'
         }));
+
+        if (resources.length === 0) {
+          resources.push(
+            { title: `${w.title || 'Module'} Video Tutorial`, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(w.title || 'tutorial')}`, type: 'Video' },
+            { title: `${w.title || 'Module'} Guide`, url: 'https://developer.mozilla.org/', type: 'Documentation' }
+          );
+        }
+
         const rawTasks = w.tasks || [];
         const tasks = rawTasks.length > 0 ? rawTasks.map((t, tIdx) => ({
           id: t.id || Date.now() + idx * 20 + tIdx + 1,
