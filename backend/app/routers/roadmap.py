@@ -30,7 +30,15 @@ def modify(request: ModifyRoadmapRequest):
 @router.put("/{roadmap_id}")
 def modify_by_id(roadmap_id: str, body: Dict[str, Any] = Body(...)):
     user_msg = body.get("modification_prompt") or body.get("user_message") or "Adjust workload"
-    req = ModifyRoadmapRequest(roadmap_id=roadmap_id, user_message=user_msg, modification_prompt=user_msg)
+    req = ModifyRoadmapRequest(
+        roadmap_id=roadmap_id,
+        user_message=user_msg,
+        modification_prompt=user_msg,
+        goal=body.get("goal"),
+        weeks_duration=body.get("weeks_duration"),
+        hours_per_week=body.get("hours_per_week", 15),
+        current_roadmap=body.get("current_roadmap")
+    )
     return modify_roadmap(req)
 
 

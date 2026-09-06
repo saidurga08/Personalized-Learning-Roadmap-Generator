@@ -369,16 +369,33 @@ export const RoadmapProvider = ({ children }) => {
   const modifyRoadmap = async (roadmapId, modificationPrompt) => {
     setLoading(true);
     try {
-      const updated = await roadmapService.modifyRoadmap(roadmapId, { modification_prompt: modificationPrompt });
       const current = roadmaps.find(r => r.id.toString() === roadmapId.toString()) || activeRoadmap;
+      const goalTitle = current?.goal || current?.roadmap_json?.goal || 'Custom AI Learning Goal';
+      const originalWeeksCount = current?.roadmap_json?.weeks?.length || 6;
+
+      const payload = {
+        roadmap_id: roadmapId,
+        modification_prompt: modificationPrompt,
+        user_message: modificationPrompt,
+        goal: goalTitle,
+        weeks_duration: originalWeeksCount,
+        current_roadmap: current?.roadmap_json || current
+      };
+
+      const updated = await roadmapService.modifyRoadmap(roadmapId, payload);
       
       const rawObj = updated.roadmap || updated;
       const innerRoadmap = rawObj.roadmap || rawObj.roadmap_json || rawObj;
+      const finalGoal = innerRoadmap.goal || innerRoadmap.title || goalTitle;
       const rawWeeks = innerRoadmap.weeks || rawObj.weeks || current?.roadmap_json?.weeks || [];
 
       const formattedWeeks = rawWeeks.map((w, idx) => {
         const weekNum = w.week_number || w.week || idx + 1;
+        const moduleTitle = w.title || `Module ${weekNum}: ${finalGoal} Concepts`;
         const topics = (w.topics || []).map(t => typeof t === 'string' ? t : (t.title || t.name || 'Topic'));
+        if (topics.length === 0) {
+          topics.push(`${finalGoal} Practical Principles`, `Hands-on Lab #${weekNum}`, `Optimization & Best Practices`);
+        }
         
         let rawResList = [];
         if (w.resources && Array.isArray(w.resources) && w.resources.length > 0) {
@@ -392,15 +409,15 @@ export const RoadmapProvider = ({ children }) => {
         }
 
         const resources = rawResList.map(r => ({
-          title: r.title || 'Resource',
-          url: r.url || `https://www.youtube.com/results?search_query=${encodeURIComponent(w.title || 'tutorial')}`,
+          title: r.title || `${finalGoal} Guide`,
+          url: r.url || `https://www.youtube.com/results?search_query=${encodeURIComponent(moduleTitle + ' tutorial')}`,
           type: r.type || 'Documentation'
         }));
 
         if (resources.length === 0) {
           resources.push(
-            { title: `${w.title || 'Module'} Video Tutorial`, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(w.title || 'tutorial')}`, type: 'Video' },
-            { title: `${w.title || 'Module'} Guide`, url: 'https://developer.mozilla.org/', type: 'Documentation' }
+            { title: `${moduleTitle} Video Tutorial`, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(moduleTitle + ' tutorial')}`, type: 'Video' },
+            { title: `${finalGoal} Official Documentation`, url: 'https://developer.mozilla.org/', type: 'Documentation' }
           );
         }
 
@@ -413,29 +430,33 @@ export const RoadmapProvider = ({ children }) => {
 
         if (tasks.length === 0) {
           tasks = [
-            { id: Date.now() + idx * 30 + 1, title: `Study ${w.title || 'Module'}: Architecture & Concepts`, completed: false },
-            { id: Date.now() + idx * 30 + 2, title: `Complete assignment: ${w.assignment || 'Practical Exercise'}`, completed: false }
+            { id: Date.now() + idx * 30 + 1, title: `Study ${moduleTitle}: Architecture & Concepts`, completed: false },
+            { id: Date.now() + idx * 30 + 2, title: `Complete practical assignment: ${w.assignment || 'Module Lab'}`, completed: false },
+            { id: Date.now() + idx * 30 + 3, title: `Review weekly assessment milestone`, completed: false }
           ];
         }
 
         return {
           week: weekNum,
-          title: w.title || `Module ${weekNum}: Re-optimized Module`,
-          description: w.description || `Module re-planned for request: "${modificationPrompt}"`,
+          title: moduleTitle,
+          description: w.description || `Module updated for request: "${modificationPrompt}"`,
           completed: false,
           topics,
           resources,
-          assignment: w.assignment || `Complete Week ${weekNum} exercise`,
-          milestone: w.milestone || `Milestone ${weekNum}`,
+          assignment: w.assignment || `Complete Week ${weekNum} project exercise`,
+          milestone: w.milestone || `Milestone ${weekNum}: Pass Week ${weekNum} practical assessment`,
           tasks
         };
       });
 
       const normalizedRm = {
         ...current,
+        goal: finalGoal,
         updated_at: new Date().toISOString(),
         roadmap_json: {
-          ...current.roadmap_json,
+          ...current?.roadmap_json,
+          goal: finalGoal,
+          duration: `${formattedWeeks.length} Weeks`,
           weeks: formattedWeeks
         }
       };
@@ -447,17 +468,20 @@ export const RoadmapProvider = ({ children }) => {
     } catch (error) {
       console.warn('API modification error, applying local AI adaptation:', error);
       const current = roadmaps.find(r => r.id.toString() === roadmapId.toString()) || activeRoadmap;
-      const modifiedWeeks = (current.roadmap_json?.weeks || []).map(w => ({
+      const goalTitle = current?.goal || current?.roadmap_json?.goal || 'Custom AI Learning Goal';
+      const modifiedWeeks = (current.roadmap_json?.weeks || []).map((w, idx) => ({
         ...w,
-        title: `${w.title} (Re-planned)`,
+        title: w.title || `Module ${idx + 1}: ${goalTitle} Core Concepts`,
         description: `Modified workload: "${modificationPrompt}"`
       }));
 
       const modifiedRm = {
         ...current,
+        goal: goalTitle,
         updated_at: new Date().toISOString(),
         roadmap_json: {
           ...current.roadmap_json,
+          goal: goalTitle,
           weeks: modifiedWeeks
         }
       };

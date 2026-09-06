@@ -18,3 +18,7 @@ class ModifyRoadmapRequest(BaseModel):
     roadmap_id: Optional[str] = None
     user_message: Optional[str] = None
     modification_prompt: Optional[str] = None
+    goal: Optional[str] = None
+    weeks_duration: Optional[int] = None
+    hours_per_week: Optional[Union[float, int, str]] = 15.0
+    current_roadmap: Optional[Any] = None

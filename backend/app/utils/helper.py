@@ -15,18 +15,25 @@ def execute_query(
 ):
     conn = get_connection()
 
-    # Check if connection is SQLite or PostgreSQL
-    is_sqlite = type(conn).__module__.startswith("sqlite")
+    # Unwrap SQLAlchemy ConnectionFairy wrapper if present
+    driver_conn = getattr(conn, 'driver_connection', None) or getattr(conn, 'connection', conn)
+    is_sqlite = "sqlite" in type(driver_conn).__module__.lower()
 
     if is_sqlite:
         import sqlite3
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        try:
+            driver_conn.row_factory = sqlite3.Row
+            cursor = driver_conn.cursor()
+        except Exception:
+            cursor = conn.cursor()
         # Convert PostgreSQL placeholders %s to SQLite ?
         formatted_query = query.replace("%s", "?")
     else:
         if HAS_PSYCOPG2:
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            try:
+                cursor = conn.cursor(cursor_factory=RealDictCursor)
+            except TypeError:
+                cursor = conn.cursor()
         else:
             cursor = conn.cursor()
         formatted_query = query
@@ -43,8 +50,15 @@ def execute_query(
         if rows:
             result = [dict(r) if hasattr(r, 'keys') else r for r in rows]
 
-    conn.commit()
+    try:
+        conn.commit()
+    except Exception:
+        pass
+
     cursor.close()
-    conn.close()
+    try:
+        conn.close()
+    except Exception:
+        pass
 
     return result

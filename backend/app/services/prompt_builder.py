@@ -92,7 +92,6 @@ def build_modification_prompt(
     roadmap_json,
     user_message
 ):
-
     roadmap = json.dumps(
         roadmap_json,
         indent=2
@@ -107,7 +106,10 @@ The user wants to modify it.
 
 Your job is to generate a NEW updated roadmap that satisfies the user's request.
 
-Preserve the user's overall learning goal unless explicitly changed.
+CRITICAL INSTRUCTIONS:
+1. Preserve the original goal topic and week count from the Current Roadmap unless explicitly requested to change.
+2. DO NOT change the topic to a generic or unrelated topic.
+3. Every week item in "weeks" MUST have actionable tasks and valid learning resources.
 
 Return ONLY valid JSON.
 
@@ -135,7 +137,36 @@ Return EXACTLY this JSON structure:
       "total_estimated_hours": 90,
       "overview": "...",
       "weeks": [
-          ...
+          {{
+              "week_number": 1,
+              "title": "Week 1 Title",
+              "description": "Week 1 Description",
+              "estimated_hours": 15,
+              "milestone": "Milestone 1",
+              "assignment": "Assignment 1",
+              "topics": [
+                  {{
+                      "title": "Topic title",
+                      "description": "Topic description",
+                      "estimated_hours": 5,
+                      "resources": [
+                          {{
+                              "title": "Resource title",
+                              "url": "https://developer.mozilla.org/",
+                              "type": "Video",
+                              "is_free": true
+                          }}
+                      ]
+                  }}
+              ],
+              "tasks": [
+                  {{
+                      "id": 1,
+                      "title": "Task title 1",
+                      "completed": false
+                  }}
+              ]
+          }}
       ]
   }}
 }}

@@ -9,10 +9,10 @@ def generate_response(prompt: str, request=None):
     if GROQ_API_KEY and GROQ_API_KEY.strip() and not GROQ_API_KEY.startswith("gsk_placeholder") and GROQ_API_KEY != "your_groq_api_key_here":
         # Candidate active models on Groq Cloud
         candidate_models = [
-            "llama-3.1-70b-versatile",
-            "llama3-70b-8192",
-            "llama3-8b-8192",
-            "mixtral-8x7b-32768"
+            "qwen/qwen3.6-27b",
+            "groq/compound-mini",
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-20b"
         ]
         
         client = Groq(api_key=GROQ_API_KEY.strip())
@@ -28,7 +28,7 @@ def generate_response(prompt: str, request=None):
                         }
                     ],
                     temperature=0.3,
-                    max_completion_tokens=8000
+                    max_completion_tokens=1000
                 )
 
                 content = response.choices[0].message.content.strip()
@@ -56,9 +56,17 @@ def generate_response(prompt: str, request=None):
     if request and hasattr(request, 'goal') and request.goal:
         goal_name = request.goal
     else:
-        goal_match = re.search(r"Goal:\s*\n?([^\n]+)", prompt, re.IGNORECASE)
+        goal_match = re.search(r"(?:Goal|Target Goal|Learning Goal):\s*\n?([^\n]+)", prompt, re.IGNORECASE)
         if goal_match:
             goal_name = goal_match.group(1).strip()
+        else:
+            json_goal = re.search(r'"goal":\s*"([^"]+)"', prompt)
+            if json_goal:
+                goal_name = json_goal.group(1).strip()
+            else:
+                json_title = re.search(r'"title":\s*"([^"]+)"', prompt)
+                if json_title:
+                    goal_name = json_title.group(1).strip()
 
     # Extract weeks duration from prompt or request
     if request and hasattr(request, 'weeks_duration') and request.weeks_duration:
@@ -67,6 +75,10 @@ def generate_response(prompt: str, request=None):
         weeks_match = re.search(r"(\d+)\s*week", prompt, re.IGNORECASE)
         if weeks_match:
             duration_weeks = int(weeks_match.group(1))
+        else:
+            json_weeks = re.search(r'"estimated_duration_weeks":\s*(\d+)', prompt)
+            if json_weeks:
+                duration_weeks = int(json_weeks.group(1))
 
     # Extract hours per week
     if request and hasattr(request, 'hours_per_week') and request.hours_per_week:
