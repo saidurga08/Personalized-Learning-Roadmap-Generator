@@ -248,13 +248,23 @@ export const RoadmapProvider = ({ children }) => {
           );
         }
 
-        // Extract tasks
+        // Extract tasks with strict guarantee of actionable tasks per week
         const rawTasks = w.tasks || [];
-        const tasks = rawTasks.map((t, tIdx) => ({
-          id: t.id || Date.now() + idx * 10 + tIdx + 1,
+        let tasks = rawTasks.map((t, tIdx) => ({
+          id: t.id || Date.now() + idx * 30 + tIdx + 1,
           title: typeof t === 'string' ? t : (t.title || t.name || `Task ${tIdx + 1}`),
           completed: Boolean(t.completed)
         }));
+
+        if (tasks.length === 0) {
+          const top1 = topics[0] || 'Core Architecture';
+          const top2 = topics[1] || 'Applied Exercise';
+          tasks = [
+            { id: Date.now() + idx * 30 + 1, title: `Study ${moduleTitle}: ${top1}`, completed: false },
+            { id: Date.now() + idx * 30 + 2, title: `Complete practical lab exercise for ${top2}`, completed: false },
+            { id: Date.now() + idx * 30 + 3, title: `Submit weekly assessment assignment project`, completed: false }
+          ];
+        }
 
         return {
           week: weekNum,
@@ -318,9 +328,9 @@ export const RoadmapProvider = ({ children }) => {
         assignment: `Build a functional ${goalTitle} mini-project for Week ${idx + 1}.`,
         milestone: `Milestone ${idx + 1}: Pass Week ${idx + 1} practical assessment.`,
         tasks: [
-          { id: Date.now() + idx * 10 + 1, title: `Read module guide for Week ${idx + 1}`, completed: false },
-          { id: Date.now() + idx * 10 + 2, title: `Complete hands-on coding lab #${idx + 1}`, completed: false },
-          { id: Date.now() + idx * 10 + 3, title: `Submit weekly assignment project`, completed: false }
+          { id: Date.now() + idx * 30 + 1, title: `Study ${goalTitle} Week ${idx + 1} module guide & architecture`, completed: false },
+          { id: Date.now() + idx * 30 + 2, title: `Complete hands-on coding lab #${idx + 1}`, completed: false },
+          { id: Date.now() + idx * 30 + 3, title: `Submit weekly assignment project`, completed: false }
         ]
       }));
 
@@ -395,14 +405,18 @@ export const RoadmapProvider = ({ children }) => {
         }
 
         const rawTasks = w.tasks || [];
-        const tasks = rawTasks.length > 0 ? rawTasks.map((t, tIdx) => ({
-          id: t.id || Date.now() + idx * 20 + tIdx + 1,
+        let tasks = rawTasks.map((t, tIdx) => ({
+          id: t.id || Date.now() + idx * 30 + tIdx + 1,
           title: typeof t === 'string' ? t : (t.title || t.name || `Task ${tIdx + 1}`),
           completed: false
-        })) : [
-          { id: Date.now() + idx * 20 + 1, title: `Study ${w.title || 'Module'}`, completed: false },
-          { id: Date.now() + idx * 20 + 2, title: `Complete assignment: ${w.assignment || 'Practical Exercise'}`, completed: false }
-        ];
+        }));
+
+        if (tasks.length === 0) {
+          tasks = [
+            { id: Date.now() + idx * 30 + 1, title: `Study ${w.title || 'Module'}: Architecture & Concepts`, completed: false },
+            { id: Date.now() + idx * 30 + 2, title: `Complete assignment: ${w.assignment || 'Practical Exercise'}`, completed: false }
+          ];
+        }
 
         return {
           week: weekNum,

@@ -6,36 +6,46 @@ from app.config import GROQ_API_KEY
 
 
 def generate_response(prompt: str, request=None):
-    if GROQ_API_KEY and GROQ_API_KEY.strip() and not GROQ_API_KEY.startswith("gsk_placeholder"):
-        try:
-            client = Groq(api_key=GROQ_API_KEY)
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=0.3,
-                max_completion_tokens=8000
-            )
+    if GROQ_API_KEY and GROQ_API_KEY.strip() and not GROQ_API_KEY.startswith("gsk_placeholder") and GROQ_API_KEY != "your_groq_api_key_here":
+        # Candidate active models on Groq Cloud
+        candidate_models = [
+            "llama-3.1-70b-versatile",
+            "llama3-70b-8192",
+            "llama3-8b-8192",
+            "mixtral-8x7b-32768"
+        ]
+        
+        client = Groq(api_key=GROQ_API_KEY.strip())
 
-            content = response.choices[0].message.content.strip()
-            content = (
-                content.replace("```json", "")
-                       .replace("```", "")
-                       .strip()
-            )
-
-            roadmap_json = json.loads(content)
-            from app.schemas.roadmap_schema import ModifiedRoadmap
+        for model_name in candidate_models:
             try:
-                return ModifiedRoadmap(**roadmap_json)
-            except Exception:
-                return roadmap_json
-        except Exception as e:
-            print("Notice: Groq API call exception, using intelligent domain generator:", e)
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    temperature=0.3,
+                    max_completion_tokens=8000
+                )
+
+                content = response.choices[0].message.content.strip()
+                content = (
+                    content.replace("```json", "")
+                           .replace("```", "")
+                           .strip()
+                )
+
+                roadmap_json = json.loads(content)
+                from app.schemas.roadmap_schema import ModifiedRoadmap
+                try:
+                    return ModifiedRoadmap(**roadmap_json)
+                except Exception:
+                    return roadmap_json
+            except Exception as e:
+                print(f"Notice: Groq model {model_name} attempt error:", e)
 
     # Dynamic fallback customized for user goal and requested duration
     goal_name = "Custom Learning Path"
